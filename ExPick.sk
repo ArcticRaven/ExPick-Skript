@@ -1,45 +1,57 @@
-#==================#
-#    ExPickaxes    #
-#      v1.3.0      #
-#   ArcticRaven_   #
-#==================#
-
 options:
-	#This sets the maximum amout of blocks the pickaxes can break
-	EpickMaxHealth : 1561
 	
-	#These set the thresholds for the notifications, by setting thier value above the EpickMaxHealth value, they will be removed
-	EpickNotif1 : 1400
-	EpickNotif2 : 1500
+	#The death system allows the choice of what happens to a player who has opted into hardcore when they die
+	#option 1: "spectate" - this option allows users to exist in spectator after death
+	#option 2: "tempban" - this option allows users to rejoin the server after configurable amount of time
+	#option 3: "ban" - this option fully bans players from the server on death
+	DeathSystem : "ban"
 	
-	#This will enable the explosion effect for ALL players, also plays the explosion sound
-	ExpickEffect : true
+	#this option sets increment in which the player is not allowed to rejoin
+	#options: years, months, weeks, days, hours, minutes, seconds (recommend days or weeks)
+	BanIncrement : days
 	
-command ExPick <player=%player%>:
-	usage: /expick <player>
-	aliases: ExPick
-	permission: expick.give
-	permission message: &7&l[&4&lExPick&7&l] &cYou do not have the required permission to perform this command
+	#this option sets the numerical value for the increments, ie 1 "days", 5 "months" etc. 
+	BanTime : 1
+	
+	#this Option sets hardcore by default for new players. False by default 
+	DefaultHardcore: false
+
+on join:
+	set {hardcore::%uuid of player%} to true if {@DefaultHardcore} is true else false
+
+command Hardcore [<text="false">]:
+	description: Opt In to playing simulated hardcore on this server
+	usage: hardcore <arguement>
 	trigger:
-		give a diamond pickaxe with lore "&4Explosive" to arg-1	
-	
-on block break:
-	if player have permission "epickaxe.use":
-		if player is holding a diamond pickaxe with lore "&4Explosive":
-			loop blocks in radius 1.75 of event-block:
-				if loop-blocks are stone or cobblestone or diorite or granite or andesite or sandstone or stone bricks or netherrack or nether bricks or endstone:
-					break loop-blocks naturally using player's tool
-					add 1 to {uses.%player%}
-					if {@ExpickEffect} is true:
-						create a fake explosion at event-block
-				if event-block is not stone or cobblestone or diorite or granite or andesite or sandstone or stone bricks or netherrack or nether bricks or air:
-					cancel event
-				if {uses.%player%} is {@EpickNotif1}:
-					send action bar "&6Your Explosive Pickaxe will break soon!" to player
-				if {uses.%player%} is {@EpickNotif2}:
-					send action bar "&cYour Explosive Pickaxe will break very soon!" to player
-				if {uses.%player%} is {@EpickMaxHealth}:
-					set player's tool to air
-					set {uses.%player%} to 0
-					play sound "entity.item.break" with volume .75 to player
-					send action bar "&4Your Explosive Pickaxe has broken!" to player
+		if arg-1 is "true":
+			set {hardcore::confirmation-time::%uuid of player%} to now
+			message "&7[&4Hardcore&7] &4Please execute '/hardcore confirm' to confirm"
+		if arg-1 is "confirm":
+			if {hardcore::confirmation-time::%uuid of player%} is set:
+				set {_time} to difference between {hardcore::confirmation-time::%uuid of player%} and now
+				if {_time} is more than 30 seconds:
+					message "&7[&4Hardcore&7] &cHardcore mode &4has expired, type '/hardcore true' again."
+					stop
+				delete {hardcore::confirmation-time::%uuid of player%}
+				set {hardcore::confirmed::%uuid of player%} to true
+				message "&7[&4Hardcore&7] &cHardcore mode &aconfirmed"
+		if arg-1 is "quit":
+			if player has permission "hardcore.quit":
+				delete {hardcore::%uuid of player%}
+				delete {hardcore::confirmation-time::%uuid of player%}
+				message "&7[&4Hardcore&7] &cHardcore mode deactivated, have a nice game!"
+				set player's gamemode to survival
+		if arg-1 is not "confirm" or "true" or "quit":
+			message "&7[&4Hardcore&7] &cIncorrect usage, please use /hardcore true to start the hardcore Opt In process"
+
+
+on death of player:
+	if {hardcore::confirmed::%uuid of player%} is set:
+		if {@DeathSystem} is "spectate":
+			set player's gamemode to spectator
+		if {@DeathSystem} is "tempban":
+			kick player
+			ban player for {@BanTime} {@BanIncrement}
+		if {@DeathSystem} is "ban":
+			kick player
+			ban player due to "Death in Hardcore"
