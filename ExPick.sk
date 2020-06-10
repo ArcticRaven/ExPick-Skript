@@ -1,10 +1,17 @@
+#==================#
+#  Hardcore OptIn  #
+#      v1.3.1      #
+#   Arctic Raven   #
+#    KingFrosty    #
+#==================#
+
 options:
 	
 	#The death system allows the choice of what happens to a player who has opted into hardcore when they die
 	#option 1: "spectate" - this option allows users to exist in spectator after death
 	#option 2: "tempban" - this option allows users to rejoin the server after configurable amount of time
 	#option 3: "ban" - this option fully bans players from the server on death
-	DeathSystem : "ban"
+	DeathSystem : "spectate"
 	
 	#this option sets increment in which the player is not allowed to rejoin
 	#options: years, months, weeks, days, hours, minutes, seconds (recommend days or weeks)
@@ -17,7 +24,7 @@ options:
 	DefaultHardcore: false
 
 on join:
-	set {hardcore::%uuid of player%} to true if {@DefaultHardcore} is true else false
+	set {hardcore::%uuid of player%} to true if {@DefaultHardcore} is true
 
 command Hardcore [<text="false">]:
 	description: Opt In to playing simulated hardcore on this server
@@ -31,8 +38,8 @@ command Hardcore [<text="false">]:
 				set {_time} to difference between {hardcore::confirmation-time::%uuid of player%} and now
 				if {_time} is more than 30 seconds:
 					message "&7[&4Hardcore&7] &cHardcore mode &4has expired, type '/hardcore true' again."
+					delete {hardcore::confirmation-time::%uuid of player%}
 					stop
-				delete {hardcore::confirmation-time::%uuid of player%}
 				set {hardcore::confirmed::%uuid of player%} to true
 				message "&7[&4Hardcore&7] &cHardcore mode &aconfirmed"
 		if arg-1 is "quit":
